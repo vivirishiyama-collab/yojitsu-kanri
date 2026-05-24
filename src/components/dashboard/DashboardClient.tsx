@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Company, Category, MonthlyEntry, LargeCategory } from '@/lib/types'
 import { Header } from '@/components/layout/Header'
@@ -65,12 +65,15 @@ export function DashboardClient({ companies, userEmail, year, categories, summar
   const totalGrossRate    = totalSales > 0 ? totalGross / totalSales * 100 : 0
   const totalOpIncomeRate = totalSales > 0 ? totalOpIncome / totalSales * 100 : 0
 
+  const monthlyGrossRate    = months.map((_, i) => monthlySales[i] > 0 ? monthlyGross[i] / monthlySales[i] * 100 : 0)
+  const monthlyOpIncomeRate = months.map((_, i) => monthlySales[i] > 0 ? monthlyOpIncome[i] / monthlySales[i] * 100 : 0)
+
   const summaryRows = [
-    { label: '売上',    values: monthlySales,    total: totalSales,    bold: true,  neg: false },
-    { label: '販売原価', values: monthlyCogs,    total: totalCogs,     bold: false, neg: false },
-    { label: '粗利',    values: monthlyGross,    total: totalGross,    bold: true,  neg: totalGross < 0,    rate: totalGrossRate },
-    { label: '販管費',  values: monthlyOpex,     total: totalOpex,     bold: false, neg: false },
-    { label: '営業利益', values: monthlyOpIncome, total: totalOpIncome, bold: true,  neg: totalOpIncome < 0, rate: totalOpIncomeRate },
+    { label: '売上',    values: monthlySales,    total: totalSales,    bold: true,  neg: false,                  rateValues: null as number[] | null, totalRate: null as number | null },
+    { label: '販売原価', values: monthlyCogs,    total: totalCogs,     bold: false, neg: false,                  rateValues: null, totalRate: null },
+    { label: '粗利',    values: monthlyGross,    total: totalGross,    bold: true,  neg: totalGross < 0,         rateValues: monthlyGrossRate,    totalRate: totalGrossRate },
+    { label: '販管費',  values: monthlyOpex,     total: totalOpex,     bold: false, neg: false,                  rateValues: null, totalRate: null },
+    { label: '営業利益', values: monthlyOpIncome, total: totalOpIncome, bold: true,  neg: totalOpIncome < 0,     rateValues: monthlyOpIncomeRate, totalRate: totalOpIncomeRate },
   ]
 
   const hasSummaryData = totalSales > 0 || totalCogs > 0 || totalOpex > 0
@@ -146,22 +149,32 @@ export function DashboardClient({ companies, userEmail, year, categories, summar
                     </thead>
                     <tbody>
                       {summaryRows.map((row, ri) => (
-                        <tr key={ri} className={`border-b ${row.bold && ri > 0 ? 'border-t-2 border-t-blue-100' : ''} ${row.bold ? 'bg-blue-50/30' : 'hover:bg-gray-50'}`}>
-                          <td className={`px-4 py-2 sticky left-0 z-10 ${row.bold ? 'bg-blue-50/30 font-semibold text-gray-800' : 'bg-white text-gray-600'}`}>{row.label}</td>
-                          <td className={`text-right px-4 py-2 font-semibold bg-gray-100 sticky z-10 border-r border-gray-200 ${row.neg ? 'text-red-600' : 'text-gray-800'}`} style={{ left: 100 }}>
-                            {row.total === 0 ? <span className="text-gray-300 font-normal">—</span> : (
-                              <span>
-                                {row.total.toLocaleString()}
-                                {row.rate !== undefined && <span className="text-xs font-normal text-gray-500 ml-1">({row.rate.toFixed(1)}%)</span>}
-                              </span>
-                            )}
-                          </td>
-                          {row.values.map((v, i) => (
-                            <td key={i} className={`text-right px-3 py-2 ${row.bold ? 'font-semibold' : ''} ${v < 0 ? 'text-red-600' : 'text-gray-800'}`}>
-                              {v === 0 ? <span className="text-gray-200">—</span> : v.toLocaleString()}
+                        <React.Fragment key={ri}>
+                          <tr className={`border-b ${row.bold && ri > 0 ? 'border-t-2 border-t-blue-100' : ''} ${row.bold ? 'bg-blue-50/30' : 'hover:bg-gray-50'}`}>
+                            <td className={`px-4 py-2 sticky left-0 z-10 ${row.bold ? 'bg-blue-50/30 font-semibold text-gray-800' : 'bg-white text-gray-600'}`}>{row.label}</td>
+                            <td className={`text-right px-4 py-2 font-semibold bg-gray-100 sticky z-10 border-r border-gray-200 ${row.neg ? 'text-red-600' : 'text-gray-800'}`} style={{ left: 100 }}>
+                              {row.total === 0 ? <span className="text-gray-300 font-normal">—</span> : row.total.toLocaleString()}
                             </td>
-                          ))}
-                        </tr>
+                            {row.values.map((v, i) => (
+                              <td key={i} className={`text-right px-3 py-2 ${row.bold ? 'font-semibold' : ''} ${v < 0 ? 'text-red-600' : 'text-gray-800'}`}>
+                                {v === 0 ? <span className="text-gray-200">—</span> : v.toLocaleString()}
+                              </td>
+                            ))}
+                          </tr>
+                          {row.rateValues && (
+                            <tr className="border-b bg-blue-50/20">
+                              <td className="px-4 py-1 text-xs text-gray-400 sticky left-0 z-10 bg-blue-50/20">　{row.label}率</td>
+                              <td className="text-right px-4 py-1 text-xs text-gray-500 bg-gray-100 sticky z-10 border-r border-gray-200" style={{ left: 100 }}>
+                                {totalSales === 0 ? '' : `${(row.totalRate ?? 0).toFixed(1)}%`}
+                              </td>
+                              {row.rateValues.map((r, i) => (
+                                <td key={i} className={`text-right px-3 py-1 text-xs ${r < 0 ? 'text-red-400' : 'text-gray-500'}`}>
+                                  {monthlySales[i] === 0 ? '' : `${r.toFixed(1)}%`}
+                                </td>
+                              ))}
+                            </tr>
+                          )}
+                        </React.Fragment>
                       ))}
                     </tbody>
                   </table>
