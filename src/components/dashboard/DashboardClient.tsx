@@ -162,8 +162,8 @@ export function DashboardClient({ companies, userEmail, year, categories, summar
                             ))}
                           </tr>
                           {row.rateValues && (
-                            <tr className="border-b bg-blue-50/20">
-                              <td className="px-4 py-1 text-xs text-gray-400 sticky left-0 z-10 bg-blue-50/20">　{row.label}率</td>
+                            <tr className="border-b bg-blue-50">
+                              <td className="px-4 py-1 text-xs text-gray-400 sticky left-0 z-10 bg-blue-50">　{row.label}率</td>
                               <td className="text-right px-4 py-1 text-xs text-gray-500 bg-gray-100 sticky z-10 border-r border-gray-200" style={{ left: 100 }}>
                                 {totalSales === 0 ? '' : `${(row.totalRate ?? 0).toFixed(1)}%`}
                               </td>
