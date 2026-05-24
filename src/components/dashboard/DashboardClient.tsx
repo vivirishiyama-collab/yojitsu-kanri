@@ -4,10 +4,8 @@ import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Company, Category, MonthlyEntry, LargeCategory } from '@/lib/types'
 import { Header } from '@/components/layout/Header'
-import { format, subMonths, addMonths } from 'date-fns'
+import { format, addMonths } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import { Button } from '@/components/ui/button'
-import { ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react'
 
 const LARGE_CATEGORIES: LargeCategory[] = ['売上内訳', '販売原価', '販管費']
 
@@ -25,17 +23,6 @@ export function DashboardClient({ companies, userEmail, year, categories, summar
   const [currentCompany, setCurrentCompany] = useState<Company | null>(
     companies.length > 0 ? companies[0] : null
   )
-  const [currentDate, setCurrentDate] = useState(new Date())
-
-  const yearMonth = format(currentDate, 'yyyy-MM')
-  const displayMonth = format(currentDate, 'yyyy年M月', { locale: ja })
-
-  function goPrev() { setCurrentDate(d => subMonths(d, 1)) }
-  function goNext() { setCurrentDate(d => addMonths(d, 1)) }
-  function goToEntry() {
-    if (!currentCompany) return
-    router.push(`/entry/${currentCompany.id}/${yearMonth}`)
-  }
 
   // 年間サマリー計算
   const months = Array.from({ length: 12 }, (_, i) => `${year}-${String(i + 1).padStart(2, '0')}`)
@@ -97,21 +84,30 @@ export function DashboardClient({ companies, userEmail, year, categories, summar
           </div>
         ) : (
           <>
-            {/* 月選択 */}
+            {/* クイックアクセス */}
             <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-lg font-semibold text-gray-700 mb-4">月を選択して入力へ</h2>
-              <div className="flex items-center gap-4">
-                <Button variant="outline" size="icon" onClick={goPrev}>
-                  <ChevronLeft className="w-4 h-4" />
-                </Button>
-                <span className="text-2xl font-bold text-gray-800 w-40 text-center">{displayMonth}</span>
-                <Button variant="outline" size="icon" onClick={goNext}>
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
-                <Button onClick={goToEntry} className="ml-4 flex items-center gap-2">
-                  入力画面へ
-                  <ArrowRight className="w-4 h-4" />
-                </Button>
+              <h2 className="text-lg font-semibold text-gray-700 mb-3">月を選んで入力へ</h2>
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+                {[-2, -1, 0, 1, 2, 3].map(offset => {
+                  const d = addMonths(new Date(), offset)
+                  const ym = format(d, 'yyyy-MM')
+                  const isCurrentMonth = offset === 0
+                  return (
+                    <button
+                      key={ym}
+                      onClick={() => router.push(`/entry/${currentCompany!.id}/${ym}`)}
+                      className={`rounded-lg border p-3 text-left transition-colors hover:bg-blue-50 hover:border-blue-300 ${
+                        isCurrentMonth ? 'border-blue-400 bg-blue-50' : 'border-gray-200'
+                      }`}
+                    >
+                      <div className="text-xs text-gray-500">{format(d, 'yyyy年', { locale: ja })}</div>
+                      <div className={`text-lg font-bold ${isCurrentMonth ? 'text-blue-600' : 'text-gray-800'}`}>
+                        {format(d, 'M月', { locale: ja })}
+                        {isCurrentMonth && <span className="text-xs font-normal ml-1">今月</span>}
+                      </div>
+                    </button>
+                  )
+                })}
               </div>
             </div>
 
