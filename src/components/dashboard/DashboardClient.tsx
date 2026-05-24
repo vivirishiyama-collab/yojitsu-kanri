@@ -117,14 +117,8 @@ export function DashboardClient({ companies, userEmail, year, categories, summar
 
             {/* 年間サマリー */}
             <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-              <div className="flex items-center justify-between px-6 py-4 border-b">
+              <div className="px-6 py-4 border-b">
                 <h2 className="text-lg font-semibold text-gray-700">{year}年　年間サマリー</h2>
-                <button
-                  onClick={() => router.push(`/summary/${currentCompany.id}/${year}`)}
-                  className="text-sm text-blue-600 hover:underline"
-                >
-                  詳細を見る →
-                </button>
               </div>
 
               {!hasSummaryData ? (
