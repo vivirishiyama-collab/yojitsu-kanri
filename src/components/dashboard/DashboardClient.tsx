@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Company, Category, MonthlyEntry, LargeCategory } from '@/lib/types'
 import { Header } from '@/components/layout/Header'
-import { format, addMonths } from 'date-fns'
+import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 
 const LARGE_CATEGORIES: LargeCategory[] = ['売上内訳', '販売原価', '販管費']
@@ -87,28 +87,31 @@ export function DashboardClient({ companies, userEmail, year, categories, summar
             {/* クイックアクセス */}
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h2 className="text-lg font-semibold text-gray-700 mb-3">月を選んで入力へ</h2>
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
-                {[-2, -1, 0, 1, 2, 3].map(offset => {
-                  const d = addMonths(new Date(), offset)
-                  const ym = format(d, 'yyyy-MM')
-                  const isCurrentMonth = offset === 0
-                  return (
-                    <button
-                      key={ym}
-                      onClick={() => router.push(`/entry/${currentCompany!.id}/${ym}`)}
-                      className={`rounded-lg border p-3 text-left transition-colors hover:bg-blue-50 hover:border-blue-300 ${
-                        isCurrentMonth ? 'border-blue-400 bg-blue-50' : 'border-gray-200'
-                      }`}
-                    >
-                      <div className="text-xs text-gray-500">{format(d, 'yyyy年', { locale: ja })}</div>
-                      <div className={`text-lg font-bold ${isCurrentMonth ? 'text-blue-600' : 'text-gray-800'}`}>
-                        {format(d, 'M月', { locale: ja })}
-                        {isCurrentMonth && <span className="text-xs font-normal ml-1">今月</span>}
-                      </div>
-                    </button>
-                  )
-                })}
-              </div>
+              {[0, 6].map(startMonth => (
+                <div key={startMonth} className="grid grid-cols-6 gap-3 mb-3 last:mb-0">
+                  {Array.from({ length: 6 }, (_, i) => {
+                    const month = startMonth + i + 1
+                    const ym = `${year}-${String(month).padStart(2, '0')}`
+                    const currentYM = format(new Date(), 'yyyy-MM')
+                    const isCurrentMonth = ym === currentYM
+                    return (
+                      <button
+                        key={ym}
+                        onClick={() => router.push(`/entry/${currentCompany!.id}/${ym}`)}
+                        className={`rounded-lg border p-3 text-left transition-colors hover:bg-blue-50 hover:border-blue-300 ${
+                          isCurrentMonth ? 'border-blue-400 bg-blue-50' : 'border-gray-200'
+                        }`}
+                      >
+                        <div className="text-xs text-gray-500">{year}年</div>
+                        <div className={`text-lg font-bold ${isCurrentMonth ? 'text-blue-600' : 'text-gray-800'}`}>
+                          {month}月
+                          {isCurrentMonth && <span className="text-xs font-normal ml-1">今月</span>}
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              ))}
             </div>
 
             {/* 年間サマリー */}
