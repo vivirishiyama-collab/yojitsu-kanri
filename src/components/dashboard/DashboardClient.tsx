@@ -150,8 +150,8 @@ export function DashboardClient({ companies, userEmail, year, categories, summar
                     <tbody>
                       {summaryRows.map((row, ri) => (
                         <React.Fragment key={ri}>
-                          <tr className={`border-b ${row.bold && ri > 0 ? 'border-t-2 border-t-blue-100' : ''} ${row.bold ? 'bg-blue-50/30' : 'hover:bg-gray-50'}`}>
-                            <td className={`px-4 py-2 sticky left-0 z-10 ${row.bold ? 'bg-blue-50/30 font-semibold text-gray-800' : 'bg-white text-gray-600'}`}>{row.label}</td>
+                          <tr className={`border-b ${row.bold && ri > 0 ? 'border-t-2 border-t-blue-100' : ''} ${row.bold ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
+                            <td className={`px-4 py-2 sticky left-0 z-10 ${row.bold ? 'bg-blue-50 font-semibold text-gray-800' : 'bg-white text-gray-600'}`}>{row.label}</td>
                             <td className={`text-right px-4 py-2 font-semibold bg-gray-100 sticky z-10 border-r border-gray-200 ${row.neg ? 'text-red-600' : 'text-gray-800'}`} style={{ left: 100 }}>
                               {row.total === 0 ? <span className="text-gray-300 font-normal">—</span> : row.total.toLocaleString()}
                             </td>
