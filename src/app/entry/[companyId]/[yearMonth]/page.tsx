@@ -14,53 +14,30 @@ export default async function EntryPage({ params }: Props) {
 
   if (!user) redirect('/login')
 
-  // 所属確認
-  const { data: companyUser } = await supabase
-    .from('company_users')
-    .select('role')
-    .eq('company_id', companyId)
-    .eq('user_id', user.id)
-    .single()
+  // 所属確認・会社情報・所属会社一覧・カテゴリ・当月エントリーを並列取得
+  const [
+    { data: companyUser },
+    { data: company },
+    { data: companyUsers },
+    { data: categories },
+    { data: existingEntries },
+  ] = await Promise.all([
+    supabase.from('company_users').select('role').eq('company_id', companyId).eq('user_id', user.id).single(),
+    supabase.from('companies').select('*').eq('id', companyId).single(),
+    supabase.from('company_users').select('company_id').eq('user_id', user.id),
+    supabase.from('categories').select('*').eq('company_id', companyId).order('large_category').order('sort_order'),
+    supabase.from('monthly_entries').select('*').eq('company_id', companyId).eq('year_month', yearMonth),
+  ])
 
   if (!companyUser) redirect('/')
-
-  // 会社情報
-  const { data: company } = await supabase
-    .from('companies')
-    .select('*')
-    .eq('id', companyId)
-    .single()
-
   if (!company) redirect('/')
 
-  // 所属会社一覧（ヘッダー用）
-  const { data: companyUsers } = await supabase
-    .from('company_users')
-    .select('company_id')
-    .eq('user_id', user.id)
-
   const companyIds = companyUsers?.map(cu => cu.company_id) ?? []
-
   const { data: companies } = await supabase
     .from('companies')
     .select('*')
     .in('id', companyIds.length > 0 ? companyIds : ['00000000-0000-0000-0000-000000000000'])
     .order('name')
-
-  // カテゴリ一覧
-  const { data: categories } = await supabase
-    .from('categories')
-    .select('*')
-    .eq('company_id', companyId)
-    .order('large_category')
-    .order('sort_order')
-
-  // 当月エントリーを取得
-  const { data: existingEntries } = await supabase
-    .from('monthly_entries')
-    .select('*')
-    .eq('company_id', companyId)
-    .eq('year_month', yearMonth)
 
   let entries = existingEntries ?? []
 
@@ -79,7 +56,8 @@ export default async function EntryPage({ params }: Props) {
         company_id: companyId,
         category_id: e.category_id,
         year_month: yearMonth,
-        amount: e.amount_type === 'fixed' ? e.amount : null, // 金額固定のみ金額を引き継ぎ
+        amount: e.amount_type === 'fixed' ? e.amount : null,
+        amount_including_tax: e.amount_type === 'fixed' ? e.amount_including_tax : null,
         amount_type: e.amount_type,
         status: null,
         updated_by: user.id,
