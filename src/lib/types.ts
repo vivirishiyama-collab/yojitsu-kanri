@@ -24,6 +24,7 @@ export interface MonthlyEntry {
   category_id: string
   year_month: string
   amount: number | null
+  amount_including_tax: number | null
   amount_type: AmountType
   status: EntryStatus
   note: string | null
