@@ -527,13 +527,14 @@ export function EntryClient({
                                   {/* 税抜き金額入力欄 */}
                                   <div className="relative w-36 flex-shrink-0">
                                     <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">税抜</span>
-                                    <Input
+                                    <input
                                       type="text"
+                                      inputMode="numeric"
                                       value={focusedInput === `exc-${cat.id}` ? excludingTaxValue : formatWithComma(excludingTaxValue)}
                                       onChange={e => handleExcludingTaxChange(cat.id, e.target.value)}
                                       onFocus={() => setFocusedInput(`exc-${cat.id}`)}
                                       onBlur={() => { setFocusedInput(null); handleExcludingBlur(cat.id) }}
-                                      className={`pl-9 text-right text-sm ${isFixed ? 'bg-blue-50' : ''}`}
+                                      className={`h-8 w-full rounded-lg border border-input px-2.5 py-1 text-sm text-right pl-9 outline-none focus:border-ring focus:ring-2 focus:ring-ring/50 disabled:opacity-50 disabled:cursor-not-allowed ${isFixed ? 'bg-blue-50' : 'bg-transparent'}`}
                                       placeholder="0"
                                       disabled={isSaving}
                                     />
@@ -542,13 +543,14 @@ export function EntryClient({
                                   {/* 税込み金額入力欄 */}
                                   <div className="relative w-36 flex-shrink-0">
                                     <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">税込</span>
-                                    <Input
+                                    <input
                                       type="text"
+                                      inputMode="numeric"
                                       value={focusedInput === `inc-${cat.id}` ? includingTaxValue : formatWithComma(includingTaxValue)}
                                       onChange={e => handleIncludingTaxChange(cat.id, e.target.value)}
                                       onFocus={() => setFocusedInput(`inc-${cat.id}`)}
                                       onBlur={() => { setFocusedInput(null); handleIncludingBlur(cat.id) }}
-                                      className={`pl-9 text-right text-sm ${isFixed ? 'bg-blue-50' : ''}`}
+                                      className={`h-8 w-full rounded-lg border border-input px-2.5 py-1 text-sm text-right pl-9 outline-none focus:border-ring focus:ring-2 focus:ring-ring/50 disabled:opacity-50 disabled:cursor-not-allowed ${isFixed ? 'bg-blue-50' : 'bg-transparent'}`}
                                       placeholder="0"
                                       disabled={isSaving}
                                     />
