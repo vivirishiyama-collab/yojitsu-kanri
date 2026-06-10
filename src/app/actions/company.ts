@@ -23,7 +23,7 @@ export async function createCompany(name: string): Promise<{ error?: string; com
     .select()
     .single()
 
-  if (companyErr || !company) return { error: '会社の作成に失敗しました' }
+  if (companyErr || !company) return { error: `会社の作成に失敗しました: ${companyErr?.message}` }
 
   const { error: memberErr } = await supabase
     .from('company_users')
