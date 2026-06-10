@@ -6,6 +6,7 @@ export interface Company {
   id: string
   name: string
   slug: string
+  fiscal_year_start_month: number
   created_at: string
 }
 

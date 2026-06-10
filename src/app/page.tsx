@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { DashboardClient } from '@/components/dashboard/DashboardClient'
-import { format } from 'date-fns'
+import { getFiscalYearMonths, getCurrentFiscalYear } from '@/lib/fiscalYear'
 
 interface Props {
   searchParams: Promise<{ company?: string; year?: string }>
@@ -27,15 +27,19 @@ export default async function HomePage({ searchParams }: Props) {
     .in('id', companyIds.length > 0 ? companyIds : ['00000000-0000-0000-0000-000000000000'])
     .order('name')
 
-  const currentYear = format(new Date(), 'yyyy')
-  const year = yearParam ?? currentYear
-  const firstCompanyId = companyParam ?? companyIds[0]
-  const months = Array.from({ length: 12 }, (_, i) => `${year}-${String(i + 1).padStart(2, '0')}`)
+  const firstCompany = companyParam
+    ? companies?.find(c => c.id === companyParam) ?? companies?.[0]
+    : companies?.[0]
 
-  const [{ data: categories }, { data: summaryEntries }] = firstCompanyId
+  const startMonth = firstCompany?.fiscal_year_start_month ?? 1
+  const currentFiscalYear = getCurrentFiscalYear(startMonth)
+  const fiscalYear = yearParam ? Number(yearParam) : currentFiscalYear
+  const months = getFiscalYearMonths(fiscalYear, startMonth)
+
+  const [{ data: categories }, { data: summaryEntries }] = firstCompany
     ? await Promise.all([
-        supabase.from('categories').select('*').eq('company_id', firstCompanyId).order('large_category').order('sort_order'),
-        supabase.from('monthly_entries').select('*').eq('company_id', firstCompanyId).in('year_month', months),
+        supabase.from('categories').select('*').eq('company_id', firstCompany.id).order('large_category').order('sort_order'),
+        supabase.from('monthly_entries').select('*').eq('company_id', firstCompany.id).in('year_month', months),
       ])
     : [{ data: null }, { data: null }]
 
@@ -44,8 +48,10 @@ export default async function HomePage({ searchParams }: Props) {
       companies={companies ?? []}
       userEmail={user.email ?? ''}
       userId={user.id}
-      year={year}
-      currentYear={currentYear}
+      fiscalYear={fiscalYear}
+      currentFiscalYear={currentFiscalYear}
+      fiscalYearStartMonth={startMonth}
+      fiscalYearMonths={months}
       categories={categories ?? []}
       summaryEntries={summaryEntries ?? []}
     />
