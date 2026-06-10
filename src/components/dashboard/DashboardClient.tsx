@@ -14,15 +14,18 @@ interface Props {
   userEmail: string
   userId: string
   year: string
+  currentYear: string
   categories: Category[]
   summaryEntries: MonthlyEntry[]
 }
 
-export function DashboardClient({ companies, userEmail, year, categories, summaryEntries }: Props) {
+export function DashboardClient({ companies, userEmail, year, currentYear, categories, summaryEntries }: Props) {
   const router = useRouter()
   const [currentCompany, setCurrentCompany] = useState<Company | null>(
     companies.length > 0 ? companies[0] : null
   )
+
+  const yearTabs = [String(Number(currentYear) - 1), currentYear]
 
   // 年間サマリー計算
   const months = Array.from({ length: 12 }, (_, i) => `${year}-${String(i + 1).padStart(2, '0')}`)
@@ -72,7 +75,7 @@ export function DashboardClient({ companies, userEmail, year, categories, summar
         currentCompany={currentCompany}
         onCompanyChange={c => {
           setCurrentCompany(c)
-          router.push(`/?company=${c.id}`)
+          router.push(`/?company=${c.id}&year=${year}`)
         }}
         userEmail={userEmail}
       />
@@ -84,6 +87,23 @@ export function DashboardClient({ companies, userEmail, year, categories, summar
           </div>
         ) : (
           <>
+            {/* 年タブ */}
+            <div className="flex gap-2">
+              {yearTabs.map(y => (
+                <button
+                  key={y}
+                  onClick={() => router.push(`/?company=${currentCompany!.id}&year=${y}`)}
+                  className={`px-5 py-2 rounded-lg text-sm font-semibold transition-colors border ${
+                    y === year
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                  }`}
+                >
+                  {y}年
+                </button>
+              ))}
+            </div>
+
             {/* クイックアクセス */}
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h2 className="text-lg font-semibold text-gray-700 mb-3">月を選んで入力へ</h2>

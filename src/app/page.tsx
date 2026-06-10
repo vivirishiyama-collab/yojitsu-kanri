@@ -3,7 +3,12 @@ import { createClient } from '@/lib/supabase/server'
 import { DashboardClient } from '@/components/dashboard/DashboardClient'
 import { format } from 'date-fns'
 
-export default async function HomePage() {
+interface Props {
+  searchParams: Promise<{ company?: string; year?: string }>
+}
+
+export default async function HomePage({ searchParams }: Props) {
+  const { company: companyParam, year: yearParam } = await searchParams
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -22,9 +27,9 @@ export default async function HomePage() {
     .in('id', companyIds.length > 0 ? companyIds : ['00000000-0000-0000-0000-000000000000'])
     .order('name')
 
-  // 最初の会社の今年の年間サマリーを並列取得
-  const firstCompanyId = companyIds[0]
-  const year = format(new Date(), 'yyyy')
+  const currentYear = format(new Date(), 'yyyy')
+  const year = yearParam ?? currentYear
+  const firstCompanyId = companyParam ?? companyIds[0]
   const months = Array.from({ length: 12 }, (_, i) => `${year}-${String(i + 1).padStart(2, '0')}`)
 
   const [{ data: categories }, { data: summaryEntries }] = firstCompanyId
@@ -40,6 +45,7 @@ export default async function HomePage() {
       userEmail={user.email ?? ''}
       userId={user.id}
       year={year}
+      currentYear={currentYear}
       categories={categories ?? []}
       summaryEntries={summaryEntries ?? []}
     />
