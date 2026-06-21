@@ -311,11 +311,25 @@ export function EntryClient({
     }
   }
 
-  // 集計（税抜き金額で計算）
+  // 集計（税抜き）
   function calcTotal(largeCat: LargeCategory) {
     return categories
       .filter(c => c.large_category === largeCat)
       .reduce((sum, c) => sum + (entries[c.id]?.amount ?? 0), 0)
+  }
+
+  // 集計（税込み）
+  function calcTotalIncluding(largeCat: LargeCategory) {
+    return categories
+      .filter(c => c.large_category === largeCat)
+      .reduce((sum, c) => {
+        const entry = entries[c.id]
+        if (entry?.amount_including_tax != null) return sum + entry.amount_including_tax
+        if (entry?.amount != null) return sum + calcIncludingTax(entry.amount)
+        // 未保存の入力値から取得
+        const inc = taxIncludedInputs[c.id]
+        return sum + (inc ? parseInt(inc, 10) || 0 : 0)
+      }, 0)
   }
 
   const 売上 = calcTotal('売上内訳')
@@ -405,13 +419,16 @@ export function EntryClient({
           {LARGE_CATEGORIES.map(largeCat => {
             const cats = categories.filter(c => c.large_category === largeCat)
             const total = calcTotal(largeCat)
+            const totalIncluding = calcTotalIncluding(largeCat)
             return (
               <div key={largeCat} className="bg-white rounded-xl shadow-sm overflow-hidden">
                 {/* ヘッダー行 */}
                 <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b">
                   <h2 className="font-semibold text-gray-700">{largeCat}</h2>
                   <div className="flex items-center gap-3">
-                    <span className="text-sm font-medium text-gray-600">合計（税抜き）: ¥{formatNumber(total)}</span>
+                    <span className="text-sm text-gray-500">税抜: <span className="font-medium text-gray-700">¥{formatNumber(total)}</span></span>
+                    <span className="text-gray-300">|</span>
+                    <span className="text-sm text-gray-500">税込: <span className="font-medium text-gray-700">¥{formatNumber(totalIncluding)}</span></span>
                     <Button
                       variant="ghost"
                       size="sm"
