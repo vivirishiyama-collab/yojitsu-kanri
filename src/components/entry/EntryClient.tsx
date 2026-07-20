@@ -76,6 +76,15 @@ export function EntryClient({
     return init
   })
 
+  // メモ入力欄の表示値（カテゴリID → メモ文字列）
+  const [noteInputs, setNoteInputs] = useState<Record<string, string>>(() => {
+    const init: Record<string, string> = {}
+    initialEntries.forEach(e => {
+      if (e.note != null) init[e.category_id] = e.note
+    })
+    return init
+  })
+
   const [saving, setSaving] = useState<string | null>(null)
   const [showAddDialog, setShowAddDialog] = useState<LargeCategory | null>(null)
   // フォーカス中の入力欄を管理（フォーカス中は生の数字、外れたらカンマ付き表示）
@@ -248,6 +257,58 @@ export function EntryClient({
     setSaving(null)
   }, [taxIncludedInputs, entries, company.id, yearMonth, userId, supabase])
 
+  // メモ入力欄の変更
+  const handleNoteChange = useCallback((categoryId: string, value: string) => {
+    setNoteInputs(prev => ({ ...prev, [categoryId]: value }))
+  }, [])
+
+  // メモ欄からフォーカスが外れたとき：DB保存（金額は現状維持）
+  const handleNoteBlur = useCallback(async (categoryId: string) => {
+    const raw = noteInputs[categoryId] ?? ''
+    const note = raw.trim() === '' ? null : raw
+    const current = entries[categoryId]
+
+    // 変化がなければ保存しない
+    if ((current?.note ?? null) === note) return
+
+    const updated: MonthlyEntry = {
+      id: current?.id ?? '',
+      company_id: company.id,
+      category_id: categoryId,
+      year_month: yearMonth,
+      amount: current?.amount ?? null,
+      amount_including_tax: current?.amount_including_tax ?? null,
+      amount_type: current?.amount_type ?? 'free',
+      status: null,
+      note,
+      updated_by: userId,
+      updated_at: new Date().toISOString(),
+    }
+    setEntries(prev => ({ ...prev, [categoryId]: updated }))
+
+    setSaving(categoryId)
+    const { data, error } = await supabase
+      .from('monthly_entries')
+      .upsert({
+        company_id: company.id,
+        category_id: categoryId,
+        year_month: yearMonth,
+        amount: updated.amount,
+        amount_including_tax: updated.amount_including_tax,
+        amount_type: updated.amount_type,
+        status: null,
+        note,
+        updated_by: userId,
+        updated_at: updated.updated_at,
+      }, { onConflict: 'company_id,category_id,year_month' })
+      .select()
+      .single()
+    if (!error && data) {
+      setEntries(prev => ({ ...prev, [categoryId]: data }))
+    }
+    setSaving(null)
+  }, [noteInputs, entries, company.id, yearMonth, userId, supabase])
+
   // 固定/フリー切り替え
   const toggleAmountType = useCallback(async (categoryId: string) => {
     const current = entries[categoryId]
@@ -308,6 +369,7 @@ export function EntryClient({
       setEntries(prev => { const next = { ...prev }; delete next[cat.id]; return next })
       setTaxExcludedInputs(prev => { const next = { ...prev }; delete next[cat.id]; return next })
       setTaxIncludedInputs(prev => { const next = { ...prev }; delete next[cat.id]; return next })
+      setNoteInputs(prev => { const next = { ...prev }; delete next[cat.id]; return next })
     }
   }
 
@@ -449,6 +511,7 @@ export function EntryClient({
                     <span className="w-20 text-center">翌月の金額</span>
                     <span className="w-36 text-right pr-2">税抜き金額（円）</span>
                     <span className="w-36 text-right pr-2">税込み金額（円）</span>
+                    <span className="w-48">メモ</span>
                     <span className="w-10"></span>
                   </div>
                 )}
@@ -569,6 +632,19 @@ export function EntryClient({
                                       onBlur={() => { setFocusedInput(null); handleIncludingBlur(cat.id) }}
                                       className={`h-8 w-full rounded-lg border border-input px-2.5 py-1 text-sm text-right pl-9 outline-none focus:border-ring focus:ring-2 focus:ring-ring/50 disabled:opacity-50 disabled:cursor-not-allowed ${isFixed ? 'bg-blue-50' : 'bg-transparent'}`}
                                       placeholder="0"
+                                      disabled={isSaving}
+                                    />
+                                  </div>
+
+                                  {/* メモ入力欄 */}
+                                  <div className="relative w-48 flex-shrink-0">
+                                    <input
+                                      type="text"
+                                      value={noteInputs[cat.id] ?? ''}
+                                      onChange={e => handleNoteChange(cat.id, e.target.value)}
+                                      onBlur={() => handleNoteBlur(cat.id)}
+                                      className="h-8 w-full rounded-lg border border-input px-2.5 py-1 text-sm bg-transparent outline-none focus:border-ring focus:ring-2 focus:ring-ring/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                      placeholder="メモ"
                                       disabled={isSaving}
                                     />
                                   </div>
