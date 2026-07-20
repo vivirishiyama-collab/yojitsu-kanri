@@ -4,6 +4,20 @@ import { format, parse } from 'date-fns'
 import { ja } from 'date-fns/locale'
 
 const LARGE_CATEGORIES: LargeCategory[] = ['売上内訳', '販売原価', '販管費']
+const TAX_RATE = 0.1 // 消費税率10%
+
+// 税抜き → 税込み（端数切り捨て）
+function calcIncludingTax(excludingTax: number): number {
+  return Math.floor(excludingTax * (1 + TAX_RATE))
+}
+
+// エントリーの税込み金額（保存済みを優先、無ければ税抜きから逆算）
+function includingTaxOf(entry: MonthlyEntry | undefined): number | null {
+  if (!entry) return null
+  if (entry.amount_including_tax != null) return entry.amount_including_tax
+  if (entry.amount != null) return calcIncludingTax(entry.amount)
+  return null
+}
 
 interface ExportParams {
   company: Company
@@ -22,15 +36,21 @@ export function exportToExcel({ company, yearMonth, categories, entries }: Expor
   const rows: (string | number | null)[][] = []
 
   // ヘッダー
-  rows.push([company.name, '', sheetName, '', '', '', ''])
-  rows.push(['ステータス', '大項目', '中項目', '金額', '固定/フリー', 'メモ', ''])
+  rows.push([company.name, '', sheetName, '', '', '', '', ''])
+  rows.push(['ステータス', '大項目', '中項目', '金額（税抜）', '金額（税込）', '固定/フリー', 'メモ', ''])
   rows.push([])
 
-  // 集計行
+  // 集計行（税抜）
   const calcTotal = (largeCat: LargeCategory) =>
     categories
       .filter(c => c.large_category === largeCat)
       .reduce((sum, c) => sum + (entries[c.id]?.amount ?? 0), 0)
+
+  // 集計行（税込）
+  const calcTotalIncluding = (largeCat: LargeCategory) =>
+    categories
+      .filter(c => c.large_category === largeCat)
+      .reduce((sum, c) => sum + (includingTaxOf(entries[c.id]) ?? 0), 0)
 
   const 売上 = calcTotal('売上内訳')
   const 販売原価 = calcTotal('販売原価')
@@ -40,20 +60,27 @@ export function exportToExcel({ company, yearMonth, categories, entries }: Expor
   const 粗利率 = 売上 > 0 ? (粗利 / 売上 * 100) : 0
   const 営業利益率 = 売上 > 0 ? (営業利益 / 売上 * 100) : 0
 
-  rows.push(['【サマリー】', '', '', '', '', '', ''])
-  rows.push(['', '売上合計', '', 売上, '', '', ''])
-  rows.push(['', '販売原価', '', 販売原価, '', '', ''])
-  rows.push(['', '粗利', `(${粗利率.toFixed(1)}%)`, 粗利, '', '', ''])
-  rows.push(['', '販管費', '', 販管費, '', '', ''])
-  rows.push(['', '営業利益', `(${営業利益率.toFixed(1)}%)`, 営業利益, '', '', ''])
+  const 売上込 = calcTotalIncluding('売上内訳')
+  const 販売原価込 = calcTotalIncluding('販売原価')
+  const 販管費込 = calcTotalIncluding('販管費')
+  const 粗利込 = 売上込 - 販売原価込
+  const 営業利益込 = 粗利込 - 販管費込
+
+  rows.push(['【サマリー】', '', '', '', '', '', '', ''])
+  rows.push(['', '売上合計', '', 売上, 売上込, '', '', ''])
+  rows.push(['', '販売原価', '', 販売原価, 販売原価込, '', '', ''])
+  rows.push(['', '粗利', `(${粗利率.toFixed(1)}%)`, 粗利, 粗利込, '', '', ''])
+  rows.push(['', '販管費', '', 販管費, 販管費込, '', '', ''])
+  rows.push(['', '営業利益', `(${営業利益率.toFixed(1)}%)`, 営業利益, 営業利益込, '', '', ''])
   rows.push([])
 
   // 大項目ごとの明細
   for (const largeCat of LARGE_CATEGORIES) {
     const cats = categories.filter(c => c.large_category === largeCat)
     const total = calcTotal(largeCat)
+    const totalIncluding = calcTotalIncluding(largeCat)
 
-    rows.push([`【${largeCat}】`, '', '', total, '', '', ''])
+    rows.push([`【${largeCat}】`, '', '', total, totalIncluding, '', '', ''])
 
     for (const cat of cats) {
       const entry = entries[cat.id]
@@ -62,6 +89,7 @@ export function exportToExcel({ company, yearMonth, categories, entries }: Expor
         largeCat,
         cat.name,
         entry?.amount ?? null,
+        includingTaxOf(entry),
         entry?.amount_type === 'fixed' ? '固定' : 'フリー',
         entry?.note ?? '',
         '',
@@ -77,6 +105,7 @@ export function exportToExcel({ company, yearMonth, categories, entries }: Expor
     { wch: 14 },
     { wch: 12 },
     { wch: 30 },
+    { wch: 14 },
     { wch: 14 },
     { wch: 10 },
     { wch: 20 },
