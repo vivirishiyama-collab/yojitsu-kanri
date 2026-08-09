@@ -29,6 +29,7 @@ export interface MonthlyEntry {
   amount_type: AmountType
   status: EntryStatus
   note: string | null
+  note_type: AmountType
   updated_by: string | null
   updated_at: string
 }

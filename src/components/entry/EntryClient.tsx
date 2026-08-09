@@ -180,6 +180,7 @@ export function EntryClient({
       amount_type: current?.amount_type ?? 'free',
       status: null,
       note: current?.note ?? null,
+      note_type: current?.note_type ?? 'free',
       updated_by: userId,
       updated_at: new Date().toISOString(),
     }
@@ -197,6 +198,7 @@ export function EntryClient({
         amount_type: updated.amount_type,
         status: null,
         note: updated.note,
+        note_type: updated.note_type,
         updated_by: userId,
         updated_at: updated.updated_at,
       }, { onConflict: 'company_id,category_id,year_month' })
@@ -229,6 +231,7 @@ export function EntryClient({
       amount_type: current?.amount_type ?? 'free',
       status: null,
       note: current?.note ?? null,
+      note_type: current?.note_type ?? 'free',
       updated_by: userId,
       updated_at: new Date().toISOString(),
     }
@@ -246,6 +249,7 @@ export function EntryClient({
         amount_type: updated.amount_type,
         status: null,
         note: updated.note,
+        note_type: updated.note_type,
         updated_by: userId,
         updated_at: updated.updated_at,
       }, { onConflict: 'company_id,category_id,year_month' })
@@ -281,6 +285,7 @@ export function EntryClient({
       amount_type: current?.amount_type ?? 'free',
       status: null,
       note,
+      note_type: current?.note_type ?? 'free',
       updated_by: userId,
       updated_at: new Date().toISOString(),
     }
@@ -298,6 +303,7 @@ export function EntryClient({
         amount_type: updated.amount_type,
         status: null,
         note,
+        note_type: updated.note_type,
         updated_by: userId,
         updated_at: updated.updated_at,
       }, { onConflict: 'company_id,category_id,year_month' })
@@ -308,6 +314,43 @@ export function EntryClient({
     }
     setSaving(null)
   }, [noteInputs, entries, company.id, yearMonth, userId, supabase])
+
+  // メモの固定/変動切り替え（固定にすると翌月へメモを引き継ぐ）
+  const toggleNoteType = useCallback(async (categoryId: string) => {
+    const current = entries[categoryId]
+    const newType: AmountType = current?.note_type === 'fixed' ? 'free' : 'fixed'
+    const updated: MonthlyEntry = {
+      id: current?.id ?? '',
+      company_id: company.id,
+      category_id: categoryId,
+      year_month: yearMonth,
+      amount: current?.amount ?? null,
+      amount_including_tax: current?.amount_including_tax ?? null,
+      amount_type: current?.amount_type ?? 'free',
+      status: null,
+      note: current?.note ?? (noteInputs[categoryId]?.trim() || null),
+      note_type: newType,
+      updated_by: userId,
+      updated_at: new Date().toISOString(),
+    }
+    setEntries(prev => ({ ...prev, [categoryId]: updated }))
+
+    await supabase
+      .from('monthly_entries')
+      .upsert({
+        company_id: company.id,
+        category_id: categoryId,
+        year_month: yearMonth,
+        amount: updated.amount,
+        amount_including_tax: updated.amount_including_tax,
+        amount_type: updated.amount_type,
+        status: null,
+        note: updated.note,
+        note_type: newType,
+        updated_by: userId,
+        updated_at: updated.updated_at,
+      }, { onConflict: 'company_id,category_id,year_month' })
+  }, [entries, noteInputs, company.id, yearMonth, userId, supabase])
 
   // 固定/フリー切り替え
   const toggleAmountType = useCallback(async (categoryId: string) => {
@@ -511,6 +554,7 @@ export function EntryClient({
                     <span className="w-20 text-center">翌月の金額</span>
                     <span className="w-36 text-right pr-2">税抜き金額（円）</span>
                     <span className="w-36 text-right pr-2">税込み金額（円）</span>
+                    <span className="w-20 text-center">翌月のメモ</span>
                     <span className="w-48">メモ</span>
                     <span className="w-10"></span>
                   </div>
@@ -531,6 +575,7 @@ export function EntryClient({
                         {cats.map((cat, index) => {
                           const entry = entries[cat.id]
                           const isFixed = entry?.amount_type === 'fixed'
+                          const isNoteFixed = entry?.note_type === 'fixed'
                           const isSaving = saving === cat.id
                           const excludingTaxValue = taxExcludedInputs[cat.id] ?? ''
                           const includingTaxValue = taxIncludedInputs[cat.id] ?? ''
@@ -635,6 +680,21 @@ export function EntryClient({
                                       disabled={isSaving}
                                     />
                                   </div>
+
+                                  {/* メモ固定/変動トグル（固定にすると翌月へメモを引き継ぐ） */}
+                                  <button
+                                    onClick={() => toggleNoteType(cat.id)}
+                                    title={isNoteFixed ? 'クリックで「メモ変動」に切り替え（翌月に引き継がない）' : 'クリックで「メモ固定」に切り替え（翌月へメモを引き継ぐ）'}
+                                    className={`flex items-center gap-1 text-xs px-2 py-1 rounded border transition-colors flex-shrink-0 w-20 justify-center ${
+                                      isNoteFixed
+                                        ? 'border-amber-300 bg-amber-50 text-amber-600'
+                                        : 'border-gray-200 bg-white text-gray-400 hover:border-amber-200 hover:text-amber-500'
+                                    }`}
+                                  >
+                                    {isNoteFixed
+                                      ? <><Lock className="w-3 h-3" />メモ固定</>
+                                      : <><Unlock className="w-3 h-3" />メモ変動</>}
+                                  </button>
 
                                   {/* メモ入力欄 */}
                                   <div className="relative w-48 flex-shrink-0">

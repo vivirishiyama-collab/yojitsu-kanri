@@ -41,6 +41,7 @@ CREATE TABLE monthly_entries (
   amount_type TEXT NOT NULL DEFAULT 'free' CHECK (amount_type IN ('fixed', 'free')),
   status TEXT DEFAULT NULL,           -- 'そのまま' | '変更' | '質問・未計上' | NULL
   note TEXT,
+  note_type TEXT NOT NULL DEFAULT 'free' CHECK (note_type IN ('fixed', 'free')), -- 固定: 翌月へメモを引き継ぐ
   updated_by UUID REFERENCES auth.users(id),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(company_id, category_id, year_month)

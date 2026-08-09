@@ -60,6 +60,8 @@ export default async function EntryPage({ params }: Props) {
         amount_including_tax: e.amount_type === 'fixed' ? e.amount_including_tax : null,
         amount_type: e.amount_type,
         status: null,
+        note: e.note_type === 'fixed' ? e.note : null,
+        note_type: e.note_type ?? 'free',
         updated_by: user.id,
         updated_at: new Date().toISOString(),
       }))
