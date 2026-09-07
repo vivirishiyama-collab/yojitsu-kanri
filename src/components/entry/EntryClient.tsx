@@ -261,6 +261,30 @@ export function EntryClient({
     setSaving(null)
   }, [taxIncludedInputs, entries, company.id, yearMonth, userId, supabase])
 
+  // 固定メモを「以降の既存月」へ反映（空欄の月だけ埋める）
+  const propagateFixedNote = useCallback(async (categoryId: string, note: string | null) => {
+    if (!note) return // 空の固定メモは流さない
+    // 当月より後（year_monthが大きい）の既存行を取得。'YYYY-MM'は文字列比較で時系列順になる
+    const { data: laterRows } = await supabase
+      .from('monthly_entries')
+      .select('id, note')
+      .eq('company_id', company.id)
+      .eq('category_id', categoryId)
+      .gt('year_month', yearMonth)
+    if (!laterRows || laterRows.length === 0) return
+    // メモが空欄の月だけ対象（手入力済みの月は上書きしない）
+    const targets = laterRows.filter(r => r.note == null || r.note === '')
+    if (targets.length === 0) return
+    await Promise.all(
+      targets.map(r =>
+        supabase
+          .from('monthly_entries')
+          .update({ note, note_type: 'fixed', updated_by: userId, updated_at: new Date().toISOString() })
+          .eq('id', r.id)
+      )
+    )
+  }, [company.id, yearMonth, userId, supabase])
+
   // メモ入力欄の変更
   const handleNoteChange = useCallback((categoryId: string, value: string) => {
     setNoteInputs(prev => ({ ...prev, [categoryId]: value }))
@@ -272,8 +296,16 @@ export function EntryClient({
     const note = raw.trim() === '' ? null : raw
     const current = entries[categoryId]
 
-    // 変化がなければ保存しない
-    if ((current?.note ?? null) === note) return
+    // 変化がなければ保存はスキップ。ただし固定メモなら以降の空欄月への反映だけ行う
+    // （既存の固定メモを後から作られた月へ流し込むための手当て）
+    if ((current?.note ?? null) === note) {
+      if ((current?.note_type ?? 'free') === 'fixed' && note) {
+        setSaving(categoryId)
+        await propagateFixedNote(categoryId, note)
+        setSaving(null)
+      }
+      return
+    }
 
     const updated: MonthlyEntry = {
       id: current?.id ?? '',
@@ -312,8 +344,12 @@ export function EntryClient({
     if (!error && data) {
       setEntries(prev => ({ ...prev, [categoryId]: data }))
     }
+    // 固定メモなら以降の既存月へも反映
+    if (updated.note_type === 'fixed') {
+      await propagateFixedNote(categoryId, note)
+    }
     setSaving(null)
-  }, [noteInputs, entries, company.id, yearMonth, userId, supabase])
+  }, [noteInputs, entries, company.id, yearMonth, userId, supabase, propagateFixedNote])
 
   // メモの固定/変動切り替え（固定にすると翌月へメモを引き継ぐ）
   const toggleNoteType = useCallback(async (categoryId: string) => {
@@ -350,7 +386,12 @@ export function EntryClient({
         updated_by: userId,
         updated_at: updated.updated_at,
       }, { onConflict: 'company_id,category_id,year_month' })
-  }, [entries, noteInputs, company.id, yearMonth, userId, supabase])
+
+    // 固定に切り替えたら以降の既存月へも反映
+    if (newType === 'fixed') {
+      await propagateFixedNote(categoryId, updated.note)
+    }
+  }, [entries, noteInputs, company.id, yearMonth, userId, supabase, propagateFixedNote])
 
   // 固定/フリー切り替え
   const toggleAmountType = useCallback(async (categoryId: string) => {
