@@ -47,6 +47,17 @@ CREATE TABLE monthly_entries (
   UNIQUE(company_id, category_id, year_month)
 );
 
+-- 月次ステータス（確定/先入力の区別）
+CREATE TABLE monthly_status (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  year_month TEXT NOT NULL,               -- 例: '2026-08'
+  confirmed BOOLEAN NOT NULL DEFAULT FALSE, -- TRUE=確定済み / FALSE=先入力(見込)
+  updated_by UUID REFERENCES auth.users(id),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(company_id, year_month)
+);
+
 -- =====================================================
 -- RLS (Row Level Security) ポリシー
 -- =====================================================
@@ -55,6 +66,7 @@ ALTER TABLE companies ENABLE ROW LEVEL SECURITY;
 ALTER TABLE company_users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE monthly_entries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE monthly_status ENABLE ROW LEVEL SECURITY;
 
 -- 自分が所属する会社のみ参照可能
 CREATE POLICY "所属会社のみ参照" ON companies
@@ -71,6 +83,11 @@ CREATE POLICY "所属会社のカテゴリ参照" ON categories
   );
 
 CREATE POLICY "所属会社のエントリー参照" ON monthly_entries
+  FOR ALL USING (
+    company_id IN (SELECT company_id FROM company_users WHERE user_id = auth.uid())
+  );
+
+CREATE POLICY "所属会社の月次ステータス" ON monthly_status
   FOR ALL USING (
     company_id IN (SELECT company_id FROM company_users WHERE user_id = auth.uid())
   );

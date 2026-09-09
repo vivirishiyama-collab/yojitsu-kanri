@@ -21,12 +21,14 @@ export default async function EntryPage({ params }: Props) {
     { data: companyUsers },
     { data: categories },
     { data: existingEntries },
+    { data: monthStatus },
   ] = await Promise.all([
     supabase.from('company_users').select('role').eq('company_id', companyId).eq('user_id', user.id).single(),
     supabase.from('companies').select('*').eq('id', companyId).single(),
     supabase.from('company_users').select('company_id').eq('user_id', user.id),
     supabase.from('categories').select('*').eq('company_id', companyId).order('large_category').order('sort_order'),
     supabase.from('monthly_entries').select('*').eq('company_id', companyId).eq('year_month', yearMonth),
+    supabase.from('monthly_status').select('confirmed').eq('company_id', companyId).eq('year_month', yearMonth).maybeSingle(),
   ])
 
   if (!companyUser) redirect('/')
@@ -85,6 +87,7 @@ export default async function EntryPage({ params }: Props) {
       categories={categories ?? []}
       entries={entries}
       userRole={companyUser.role}
+      initialConfirmed={monthStatus?.confirmed ?? false}
     />
   )
 }

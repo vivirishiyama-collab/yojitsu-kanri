@@ -34,6 +34,15 @@ export interface MonthlyEntry {
   updated_at: string
 }
 
+export interface MonthlyStatus {
+  id: string
+  company_id: string
+  year_month: string
+  confirmed: boolean
+  updated_by: string | null
+  updated_at: string
+}
+
 export interface CompanyUser {
   id: string
   company_id: string

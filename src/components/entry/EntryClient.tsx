@@ -26,6 +26,7 @@ interface Props {
   categories: Category[]
   entries: MonthlyEntry[]
   userRole: string
+  initialConfirmed: boolean
 }
 
 // 税込み → 税抜き（端数切り捨て）
@@ -40,11 +41,15 @@ function calcIncludingTax(excludingTax: number): number {
 
 export function EntryClient({
   company, companies, userEmail, userId, yearMonth,
-  categories: initialCategories, entries: initialEntries, userRole
+  categories: initialCategories, entries: initialEntries, userRole, initialConfirmed
 }: Props) {
   const router = useRouter()
   const supabase = createClient()
   const [categories, setCategories] = useState(initialCategories)
+
+  // この月が確定済みか（年間サマリーの確定合計に反映される）
+  const [confirmed, setConfirmed] = useState(initialConfirmed)
+  const [confirmSaving, setConfirmSaving] = useState(false)
 
   // DBには税抜き金額（amount）のみ保存
   const [entries, setEntries] = useState<Record<string, MonthlyEntry>>(
@@ -495,6 +500,23 @@ export function EntryClient({
     exportToExcel({ company, yearMonth, categories, entries })
   }
 
+  // この月の確定/解除を切り替え（monthly_status に保存）
+  async function toggleConfirmed() {
+    const next = !confirmed
+    setConfirmed(next)
+    setConfirmSaving(true)
+    await supabase
+      .from('monthly_status')
+      .upsert({
+        company_id: company.id,
+        year_month: yearMonth,
+        confirmed: next,
+        updated_by: userId,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'company_id,year_month' })
+    setConfirmSaving(false)
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header
@@ -517,8 +539,21 @@ export function EntryClient({
           <div className="text-center">
             <div className="text-xl font-bold text-gray-800">{displayMonth}</div>
             <div className="text-sm text-gray-500">{company.name}</div>
+            <div className={`mt-0.5 text-xs font-medium ${confirmed ? 'text-green-600' : 'text-amber-600'}`}>
+              {confirmed ? '● 確定済み' : '○ 先入力（未確定）'}
+            </div>
           </div>
           <div className="flex items-center gap-3">
+            <Button
+              variant={confirmed ? 'default' : 'outline'}
+              size="sm"
+              onClick={toggleConfirmed}
+              disabled={confirmSaving}
+              title={confirmed ? 'クリックで確定を解除（先入力に戻す）' : 'この月の数字を確定する（年間サマリーの確定合計に反映）'}
+              className={`flex items-center gap-1 ${confirmed ? 'bg-green-600 hover:bg-green-700 text-white' : 'text-gray-600'}`}
+            >
+              {confirmed ? <><Lock className="w-4 h-4" />確定済み</> : <><Check className="w-4 h-4" />この月を確定</>}
+            </Button>
             <Button variant="outline" size="sm" onClick={() => router.push(`/summary/${company.id}/${yearMonth.slice(0, 4)}`)} className="flex items-center gap-1">
               <BarChart2 className="w-4 h-4" />
               年間サマリー
