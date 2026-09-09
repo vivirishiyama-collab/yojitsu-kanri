@@ -36,12 +36,13 @@ export default async function HomePage({ searchParams }: Props) {
   const fiscalYear = yearParam ? Number(yearParam) : currentFiscalYear
   const months = getFiscalYearMonths(fiscalYear, startMonth)
 
-  const [{ data: categories }, { data: summaryEntries }] = firstCompany
+  const [{ data: categories }, { data: summaryEntries }, { data: statuses }] = firstCompany
     ? await Promise.all([
         supabase.from('categories').select('*').eq('company_id', firstCompany.id).order('large_category').order('sort_order'),
         supabase.from('monthly_entries').select('*').eq('company_id', firstCompany.id).in('year_month', months),
+        supabase.from('monthly_status').select('*').eq('company_id', firstCompany.id).in('year_month', months),
       ])
-    : [{ data: null }, { data: null }]
+    : [{ data: null }, { data: null }, { data: null }]
 
   return (
     <DashboardClient
@@ -54,6 +55,7 @@ export default async function HomePage({ searchParams }: Props) {
       fiscalYearMonths={months}
       categories={categories ?? []}
       summaryEntries={summaryEntries ?? []}
+      statuses={statuses ?? []}
     />
   )
 }
