@@ -47,6 +47,7 @@ export default async function HomePage({ searchParams }: Props) {
   return (
     <DashboardClient
       companies={companies ?? []}
+      currentCompanyId={firstCompany?.id ?? ''}
       userEmail={user.email ?? ''}
       userId={user.id}
       fiscalYear={fiscalYear}

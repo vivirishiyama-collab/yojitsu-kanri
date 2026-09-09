@@ -2,11 +2,13 @@
 
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 import { Company, Category, MonthlyEntry, MonthlyStatus, LargeCategory } from '@/lib/types'
 import { Header } from '@/components/layout/Header'
 
 interface Props {
   companies: Company[]
+  currentCompanyId: string
   userEmail: string
   userId: string
   fiscalYear: number
@@ -19,13 +21,42 @@ interface Props {
 }
 
 export function DashboardClient({
-  companies, userEmail, fiscalYear, currentFiscalYear,
+  companies, currentCompanyId, userEmail, userId, fiscalYear, currentFiscalYear,
   fiscalYearStartMonth, fiscalYearMonths, categories, summaryEntries, statuses
 }: Props) {
   const router = useRouter()
+  const supabase = createClient()
   const [currentCompany, setCurrentCompany] = useState<Company | null>(
-    companies.length > 0 ? companies[0] : null
+    companies.find(c => c.id === currentCompanyId) ?? (companies.length > 0 ? companies[0] : null)
   )
+
+  // 確定済みの月（year_month の集合）。ダッシュボードから直接切り替え可能にするため state で保持
+  const [confirmedMonths, setConfirmedMonths] = useState<Set<string>>(
+    new Set(statuses.filter(s => s.confirmed).map(s => s.year_month))
+  )
+  const [savingMonth, setSavingMonth] = useState<string | null>(null)
+
+  // 月の確定/解除を切り替え（monthly_status に保存）
+  async function toggleConfirmed(ym: string) {
+    if (!currentCompany) return
+    const next = !confirmedMonths.has(ym)
+    setConfirmedMonths(prev => {
+      const s = new Set(prev)
+      if (next) s.add(ym); else s.delete(ym)
+      return s
+    })
+    setSavingMonth(ym)
+    await supabase
+      .from('monthly_status')
+      .upsert({
+        company_id: currentCompany.id,
+        year_month: ym,
+        confirmed: next,
+        updated_by: userId,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'company_id,year_month' })
+    setSavingMonth(null)
+  }
 
   const yearTabs = [currentFiscalYear - 1, currentFiscalYear]
 
@@ -42,9 +73,7 @@ export function DashboardClient({
       .reduce((sum, c) => sum + (entryMap[c.id]?.[month] ?? 0), 0)
   }
 
-  // 確定済みの月（confirmed=true）のセット
-  const confirmedSet = new Set(statuses.filter(s => s.confirmed).map(s => s.year_month))
-  const isConfirmed = (i: number) => confirmedSet.has(fiscalYearMonths[i])
+  const isConfirmed = (i: number) => confirmedMonths.has(fiscalYearMonths[i])
 
   const monthlySales    = fiscalYearMonths.map(m => calcLargeTotal('売上内訳', m))
   const monthlyCogs     = fiscalYearMonths.map(m => calcLargeTotal('販売原価', m))
@@ -140,20 +169,37 @@ export function DashboardClient({
                   {row.map(ym => {
                     const [y, m] = ym.split('-')
                     const isCurrentMonth = ym === currentYM
+                    const conf = confirmedMonths.has(ym)
                     return (
-                      <button
+                      <div
                         key={ym}
-                        onClick={() => router.push(`/entry/${currentCompany.id}/${ym}`)}
-                        className={`rounded-lg border p-3 text-left transition-colors hover:bg-blue-50 hover:border-blue-300 ${
+                        className={`rounded-lg border p-3 transition-colors ${
                           isCurrentMonth ? 'border-blue-400 bg-blue-50' : 'border-gray-200'
                         }`}
                       >
-                        <div className="text-xs text-gray-500">{y}年</div>
-                        <div className={`text-lg font-bold ${isCurrentMonth ? 'text-blue-600' : 'text-gray-800'}`}>
-                          {parseInt(m)}月
-                          {isCurrentMonth && <span className="text-xs font-normal ml-1">今月</span>}
-                        </div>
-                      </button>
+                        <button
+                          onClick={() => router.push(`/entry/${currentCompany.id}/${ym}`)}
+                          className="block w-full text-left hover:opacity-70 transition-opacity"
+                        >
+                          <div className="text-xs text-gray-500">{y}年</div>
+                          <div className={`text-lg font-bold ${isCurrentMonth ? 'text-blue-600' : 'text-gray-800'}`}>
+                            {parseInt(m)}月
+                            {isCurrentMonth && <span className="text-xs font-normal ml-1">今月</span>}
+                          </div>
+                        </button>
+                        <button
+                          onClick={() => toggleConfirmed(ym)}
+                          disabled={savingMonth === ym}
+                          title={conf ? 'クリックで確定を解除（先入力に戻す）' : 'クリックでこの月を確定（年間サマリーの確定合計に反映）'}
+                          className={`mt-2 w-full text-xs rounded border px-2 py-1 transition-colors disabled:opacity-50 ${
+                            conf
+                              ? 'border-green-300 bg-green-50 text-green-700 hover:bg-green-100'
+                              : 'border-amber-300 bg-white text-amber-600 hover:bg-amber-50'
+                          }`}
+                        >
+                          {conf ? '● 確定済み' : '○ 先入力'}
+                        </button>
+                      </div>
                     )
                   })}
                 </div>
