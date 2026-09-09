@@ -162,10 +162,10 @@ export function DashboardClient({
             </div>
 
             {/* 月カード */}
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-lg font-semibold text-gray-700 mb-3">月を選んで入力へ</h2>
+            <div className="bg-white rounded-xl shadow-sm p-4">
+              <h2 className="text-base font-semibold text-gray-700 mb-2">月を選んで入力へ</h2>
               {[firstRow, secondRow].map((row, ri) => (
-                <div key={ri} className="grid grid-cols-6 gap-3 mb-3 last:mb-0">
+                <div key={ri} className="grid grid-cols-6 gap-2 mb-2 last:mb-0">
                   {row.map(ym => {
                     const [y, m] = ym.split('-')
                     const isCurrentMonth = ym === currentYM
@@ -173,25 +173,24 @@ export function DashboardClient({
                     return (
                       <div
                         key={ym}
-                        className={`rounded-lg border p-3 transition-colors ${
+                        className={`rounded-lg border px-2.5 py-2 transition-colors ${
                           isCurrentMonth ? 'border-blue-400 bg-blue-50' : 'border-gray-200'
                         }`}
                       >
                         <button
                           onClick={() => router.push(`/entry/${currentCompany.id}/${ym}`)}
-                          className="block w-full text-left hover:opacity-70 transition-opacity"
+                          className="flex w-full items-baseline gap-1 text-left hover:opacity-70 transition-opacity"
                         >
-                          <div className="text-xs text-gray-500">{y}年</div>
-                          <div className={`text-lg font-bold ${isCurrentMonth ? 'text-blue-600' : 'text-gray-800'}`}>
+                          <span className={`text-base font-bold leading-tight ${isCurrentMonth ? 'text-blue-600' : 'text-gray-800'}`}>
                             {parseInt(m)}月
-                            {isCurrentMonth && <span className="text-xs font-normal ml-1">今月</span>}
-                          </div>
+                          </span>
+                          <span className="text-[10px] text-gray-400">{y}{isCurrentMonth && '・今月'}</span>
                         </button>
                         <button
                           onClick={() => toggleConfirmed(ym)}
                           disabled={savingMonth === ym}
                           title={conf ? 'クリックで確定を解除（先入力に戻す）' : 'クリックでこの月を確定（年間サマリーの確定合計に反映）'}
-                          className={`mt-2 w-full text-xs rounded border px-2 py-1 transition-colors disabled:opacity-50 ${
+                          className={`mt-1 w-full text-[11px] rounded border px-1.5 py-0.5 transition-colors disabled:opacity-50 ${
                             conf
                               ? 'border-green-300 bg-green-50 text-green-700 hover:bg-green-100'
                               : 'border-amber-300 bg-white text-amber-600 hover:bg-amber-50'
