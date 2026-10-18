@@ -58,7 +58,7 @@ export function DashboardClient({
     setSavingMonth(null)
   }
 
-  const yearTabs = [currentFiscalYear - 1, currentFiscalYear]
+  const yearTabs = [currentFiscalYear, currentFiscalYear - 1]
 
   // 年間サマリー計算
   const entryMap: Record<string, Record<string, number>> = {}
