@@ -101,15 +101,13 @@ export function DashboardClient({
   const totalOpexC      = sumC(monthlyOpex)
   const totalCogsC      = sumC(monthlyCogs)
   const totalEntertainmentC = sumC(monthlyEntertainment)
-  const totalGrossRateC    = totalSalesC > 0 ? totalGrossC / totalSalesC * 100 : 0
   const totalOpIncomeRateC = totalSalesC > 0 ? totalOpIncomeC / totalSalesC * 100 : 0
-  const monthlyGrossRate    = fiscalYearMonths.map((_, i) => monthlySales[i] > 0 ? monthlyGross[i] / monthlySales[i] * 100 : 0)
   const monthlyOpIncomeRate = fiscalYearMonths.map((_, i) => monthlySales[i] > 0 ? monthlyOpIncome[i] / monthlySales[i] * 100 : 0)
 
   const summaryRows = [
     { label: '売上',    values: monthlySales,    totalC: totalSalesC,    bold: true,  rateValues: null as number[] | null, totalRateC: null as number | null },
     { label: '販売原価', values: monthlyCogs,    totalC: totalCogsC,     bold: false, rateValues: null, totalRateC: null },
-    { label: '粗利',    values: monthlyGross,    totalC: totalGrossC,    bold: true,  rateValues: monthlyGrossRate,    totalRateC: totalGrossRateC },
+    { label: '粗利',    values: monthlyGross,    totalC: totalGrossC,    bold: true,  rateValues: null, totalRateC: null },
     { label: '販管費',  values: monthlyOpex,     totalC: totalOpexC,     bold: false, rateValues: null, totalRateC: null },
     { label: '営業利益', values: monthlyOpIncome, totalC: totalOpIncomeC, bold: true,  rateValues: monthlyOpIncomeRate, totalRateC: totalOpIncomeRateC },
   ]
