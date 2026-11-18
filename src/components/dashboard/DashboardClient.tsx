@@ -81,6 +81,12 @@ export function DashboardClient({
   const monthlyGross    = fiscalYearMonths.map((_, i) => monthlySales[i] - monthlyCogs[i])
   const monthlyOpIncome = fiscalYearMonths.map((_, i) => monthlyGross[i] - monthlyOpex[i])
 
+  // 販管費のうち接待交際費（中項目名に「交際」を含むもの）
+  const entertainmentCats = categories.filter(c => c.large_category === '販管費' && c.name.includes('交際'))
+  const monthlyEntertainment = fiscalYearMonths.map(m =>
+    entertainmentCats.reduce((s, c) => s + (entryMap[c.id]?.[m] ?? 0), 0)
+  )
+
   // 全月合計（＝見込）と確定分だけの合計
   const sum  = (arr: number[]) => arr.reduce((a, b) => a + b, 0)
   const sumC = (arr: number[]) => arr.reduce((a, b, i) => a + (isConfirmed(i) ? b : 0), 0)
@@ -96,6 +102,8 @@ export function DashboardClient({
   const totalOpIncomeC  = sumC(monthlyOpIncome)
   const totalOpexC      = sumC(monthlyOpex)
   const totalCogsC      = sumC(monthlyCogs)
+  const totalEntertainment  = sum(monthlyEntertainment)
+  const totalEntertainmentC = sumC(monthlyEntertainment)
   const totalGrossRateC    = totalSalesC > 0 ? totalGrossC / totalSalesC * 100 : 0
   const totalOpIncomeRateC = totalSalesC > 0 ? totalOpIncomeC / totalSalesC * 100 : 0
   const monthlyGrossRate    = fiscalYearMonths.map((_, i) => monthlySales[i] > 0 ? monthlyGross[i] / monthlySales[i] * 100 : 0)
@@ -270,6 +278,29 @@ export function DashboardClient({
                               )
                             })}
                           </tr>
+                          {row.label === '販管費' && entertainmentCats.length > 0 && (
+                            <tr className="border-b">
+                              <td className="px-4 py-1 text-xs text-gray-400 sticky left-0 z-10 bg-white">　うち交際費</td>
+                              <td className="text-right px-4 py-1 bg-gray-100 sticky z-10 border-r border-gray-200" style={{ left: 100 }}>
+                                <div className="text-xs text-gray-600">
+                                  {totalEntertainmentC === 0 ? <span className="text-gray-300">—</span> : totalEntertainmentC.toLocaleString()}
+                                </div>
+                                {hasTentativeData && (
+                                  <div className="text-[10px] text-gray-400 leading-tight">
+                                    見込 {totalEntertainment === 0 ? '—' : totalEntertainment.toLocaleString()}
+                                  </div>
+                                )}
+                              </td>
+                              {monthlyEntertainment.map((v, i) => {
+                                const conf = isConfirmed(i)
+                                return (
+                                  <td key={i} className={`text-right px-3 py-1 text-xs ${!conf ? 'bg-amber-50/40 text-gray-400' : 'text-gray-500'}`}>
+                                    {v === 0 ? <span className="text-gray-200">—</span> : v.toLocaleString()}
+                                  </td>
+                                )
+                              })}
+                            </tr>
+                          )}
                           {row.rateValues && (
                             <tr className="border-b bg-blue-50">
                               <td className="px-4 py-1 text-xs text-gray-400 sticky left-0 z-10 bg-blue-50">　{row.label}率</td>
