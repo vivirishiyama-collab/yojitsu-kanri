@@ -227,8 +227,8 @@ export function DashboardClient({
                   <table className="text-sm w-full">
                     <thead>
                       <tr className="bg-gray-50 border-b">
-                        <th className="text-left px-4 py-2 text-gray-600 font-semibold sticky left-0 bg-gray-50 z-10" style={{ width: 100, minWidth: 100 }}>項目</th>
-                        <th className="text-right px-4 py-2 text-gray-700 font-semibold bg-gray-100 sticky z-10 border-r border-gray-200" style={{ width: 110, minWidth: 110, left: 100 }}>
+                        <th className="text-left px-4 py-2 text-gray-600 font-semibold sticky left-0 bg-gray-50 z-10" style={{ width: 120, minWidth: 120 }}>項目</th>
+                        <th className="text-right px-4 py-2 text-gray-700 font-semibold bg-gray-100 sticky z-10 border-r border-gray-200" style={{ width: 110, minWidth: 110, left: 120 }}>
                           <div className="leading-tight">確定合計</div>
                         </th>
                         {fiscalYearMonths.map((m, i) => {
@@ -250,8 +250,8 @@ export function DashboardClient({
                       {summaryRows.map((row, ri) => (
                         <React.Fragment key={ri}>
                           <tr className={`border-b ${row.bold && ri > 0 ? 'border-t-2 border-t-blue-100' : ''} ${row.bold ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
-                            <td className={`px-4 py-2 sticky left-0 z-10 ${row.bold ? 'bg-blue-50 font-semibold text-gray-800' : 'bg-white text-gray-600'}`}>{row.label}</td>
-                            <td className="text-right px-4 py-2 bg-gray-100 sticky z-10 border-r border-gray-200" style={{ left: 100 }}>
+                            <td className={`px-4 py-2 whitespace-nowrap sticky left-0 z-10 ${row.bold ? 'bg-blue-50 font-semibold text-gray-800' : 'bg-white text-gray-600'}`}>{row.label}</td>
+                            <td className="text-right px-4 py-2 bg-gray-100 sticky z-10 border-r border-gray-200" style={{ left: 120 }}>
                               <div className={`font-semibold ${row.totalC < 0 ? 'text-red-600' : 'text-gray-800'}`}>
                                 {row.totalC === 0 ? <span className="text-gray-300 font-normal">—</span> : row.totalC.toLocaleString()}
                               </div>
@@ -267,8 +267,8 @@ export function DashboardClient({
                           </tr>
                           {row.label === '販管費' && entertainmentCats.length > 0 && (
                             <tr className="border-b">
-                              <td className="px-4 py-1 text-xs text-gray-400 sticky left-0 z-10 bg-white">　うち交際費</td>
-                              <td className="text-right px-4 py-1 bg-gray-100 sticky z-10 border-r border-gray-200" style={{ left: 100 }}>
+                              <td className="px-4 py-1 text-xs text-gray-400 whitespace-nowrap sticky left-0 z-10 bg-white">　うち交際費</td>
+                              <td className="text-right px-4 py-1 bg-gray-100 sticky z-10 border-r border-gray-200" style={{ left: 120 }}>
                                 <div className="text-xs text-gray-600">
                                   {totalEntertainmentC === 0 ? <span className="text-gray-300">—</span> : totalEntertainmentC.toLocaleString()}
                                 </div>
@@ -285,8 +285,8 @@ export function DashboardClient({
                           )}
                           {row.rateValues && (
                             <tr className="border-b bg-blue-50">
-                              <td className="px-4 py-1 text-xs text-gray-400 sticky left-0 z-10 bg-blue-50">　{row.label}率</td>
-                              <td className="text-right px-4 py-1 text-xs text-gray-500 bg-gray-100 sticky z-10 border-r border-gray-200" style={{ left: 100 }}>
+                              <td className="px-4 py-1 text-xs text-gray-400 whitespace-nowrap sticky left-0 z-10 bg-blue-50">　{row.label}率</td>
+                              <td className="text-right px-4 py-1 text-xs text-gray-500 bg-gray-100 sticky z-10 border-r border-gray-200" style={{ left: 120 }}>
                                 {totalSalesC === 0 ? '' : `${(row.totalRateC ?? 0).toFixed(1)}%`}
                               </td>
                               {row.rateValues.map((r, i) => {
