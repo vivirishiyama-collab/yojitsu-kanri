@@ -87,13 +87,11 @@ export function DashboardClient({
     entertainmentCats.reduce((s, c) => s + (entryMap[c.id]?.[m] ?? 0), 0)
   )
 
-  // 全月合計（＝見込）と確定分だけの合計
+  // 全月合計（データ有無の判定用）と確定分だけの合計
   const sum  = (arr: number[]) => arr.reduce((a, b) => a + b, 0)
   const sumC = (arr: number[]) => arr.reduce((a, b, i) => a + (isConfirmed(i) ? b : 0), 0)
 
   const totalSales      = sum(monthlySales)
-  const totalGross      = sum(monthlyGross)
-  const totalOpIncome   = sum(monthlyOpIncome)
   const totalOpex       = sum(monthlyOpex)
   const totalCogs       = sum(monthlyCogs)
 
@@ -102,7 +100,6 @@ export function DashboardClient({
   const totalOpIncomeC  = sumC(monthlyOpIncome)
   const totalOpexC      = sumC(monthlyOpex)
   const totalCogsC      = sumC(monthlyCogs)
-  const totalEntertainment  = sum(monthlyEntertainment)
   const totalEntertainmentC = sumC(monthlyEntertainment)
   const totalGrossRateC    = totalSalesC > 0 ? totalGrossC / totalSalesC * 100 : 0
   const totalOpIncomeRateC = totalSalesC > 0 ? totalOpIncomeC / totalSalesC * 100 : 0
@@ -110,18 +107,14 @@ export function DashboardClient({
   const monthlyOpIncomeRate = fiscalYearMonths.map((_, i) => monthlySales[i] > 0 ? monthlyOpIncome[i] / monthlySales[i] * 100 : 0)
 
   const summaryRows = [
-    { label: '売上',    values: monthlySales,    totalC: totalSalesC,    totalFull: totalSales,    bold: true,  rateValues: null as number[] | null, totalRateC: null as number | null },
-    { label: '販売原価', values: monthlyCogs,    totalC: totalCogsC,     totalFull: totalCogs,     bold: false, rateValues: null, totalRateC: null },
-    { label: '粗利',    values: monthlyGross,    totalC: totalGrossC,    totalFull: totalGross,    bold: true,  rateValues: monthlyGrossRate,    totalRateC: totalGrossRateC },
-    { label: '販管費',  values: monthlyOpex,     totalC: totalOpexC,     totalFull: totalOpex,     bold: false, rateValues: null, totalRateC: null },
-    { label: '営業利益', values: monthlyOpIncome, totalC: totalOpIncomeC, totalFull: totalOpIncome, bold: true,  rateValues: monthlyOpIncomeRate, totalRateC: totalOpIncomeRateC },
+    { label: '売上',    values: monthlySales,    totalC: totalSalesC,    bold: true,  rateValues: null as number[] | null, totalRateC: null as number | null },
+    { label: '販売原価', values: monthlyCogs,    totalC: totalCogsC,     bold: false, rateValues: null, totalRateC: null },
+    { label: '粗利',    values: monthlyGross,    totalC: totalGrossC,    bold: true,  rateValues: monthlyGrossRate,    totalRateC: totalGrossRateC },
+    { label: '販管費',  values: monthlyOpex,     totalC: totalOpexC,     bold: false, rateValues: null, totalRateC: null },
+    { label: '営業利益', values: monthlyOpIncome, totalC: totalOpIncomeC, bold: true,  rateValues: monthlyOpIncomeRate, totalRateC: totalOpIncomeRateC },
   ]
 
   const hasSummaryData = totalSales > 0 || totalCogs > 0 || totalOpex > 0
-  // 先入力（未確定）の月に数字が入っているか＝確定合計と見込合計に差が出るか
-  const hasTentativeData = fiscalYearMonths.some((_, i) =>
-    !isConfirmed(i) && (monthlySales[i] !== 0 || monthlyCogs[i] !== 0 || monthlyOpex[i] !== 0)
-  )
   const confirmedCount = fiscalYearMonths.filter((_, i) => isConfirmed(i)).length
   const currentYM = new Date().toISOString().slice(0, 7)
 
@@ -237,7 +230,6 @@ export function DashboardClient({
                         <th className="text-left px-4 py-2 text-gray-600 font-semibold sticky left-0 bg-gray-50 z-10" style={{ width: 100, minWidth: 100 }}>項目</th>
                         <th className="text-right px-4 py-2 text-gray-700 font-semibold bg-gray-100 sticky z-10 border-r border-gray-200" style={{ width: 110, minWidth: 110, left: 100 }}>
                           <div className="leading-tight">確定合計</div>
-                          {hasTentativeData && <div className="text-[10px] font-normal text-gray-400 leading-tight">（見込＝全月）</div>}
                         </th>
                         {fiscalYearMonths.map((m, i) => {
                           const conf = isConfirmed(i)
@@ -263,11 +255,6 @@ export function DashboardClient({
                               <div className={`font-semibold ${row.totalC < 0 ? 'text-red-600' : 'text-gray-800'}`}>
                                 {row.totalC === 0 ? <span className="text-gray-300 font-normal">—</span> : row.totalC.toLocaleString()}
                               </div>
-                              {hasTentativeData && (
-                                <div className={`text-[10px] font-normal leading-tight ${row.totalFull < 0 ? 'text-red-400' : 'text-gray-400'}`}>
-                                  見込 {row.totalFull === 0 ? '—' : row.totalFull.toLocaleString()}
-                                </div>
-                              )}
                             </td>
                             {row.values.map((v, i) => {
                               const conf = isConfirmed(i)
@@ -285,11 +272,6 @@ export function DashboardClient({
                                 <div className="text-xs text-gray-600">
                                   {totalEntertainmentC === 0 ? <span className="text-gray-300">—</span> : totalEntertainmentC.toLocaleString()}
                                 </div>
-                                {hasTentativeData && (
-                                  <div className="text-[10px] text-gray-400 leading-tight">
-                                    見込 {totalEntertainment === 0 ? '—' : totalEntertainment.toLocaleString()}
-                                  </div>
-                                )}
                               </td>
                               {monthlyEntertainment.map((v, i) => {
                                 const conf = isConfirmed(i)
