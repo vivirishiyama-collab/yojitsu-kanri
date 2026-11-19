@@ -7,7 +7,8 @@ import { Company, Category, LargeCategory } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Trash2, Plus } from 'lucide-react'
+import { ArrowLeft, Trash2, Plus, GripVertical } from 'lucide-react'
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
 import { updateFiscalYearStartMonth } from '@/app/actions/company'
 
 const LARGE_CATEGORIES: LargeCategory[] = ['売上内訳', '販売原価', '販管費']
@@ -45,16 +46,35 @@ export function AdminClient({ company, categories: initialCategories, companyUse
   async function addCategory(largeCat: LargeCategory) {
     const name = newCatNames[largeCat].trim()
     if (!name) return
-    const existing = categories.filter(c => c.large_category === largeCat).length
+    const maxOrder = Math.max(-1, ...categories.filter(c => c.large_category === largeCat).map(c => c.sort_order))
     const { data, error } = await supabase
       .from('categories')
-      .insert({ company_id: company.id, large_category: largeCat, name, sort_order: existing + 1 })
+      .insert({ company_id: company.id, large_category: largeCat, name, sort_order: maxOrder + 1 })
       .select()
       .single()
     if (!error && data) {
       setCategories(prev => [...prev, data])
       setNewCatNames(prev => ({ ...prev, [largeCat]: '' }))
     }
+  }
+
+  async function handleDragEnd(result: DropResult) {
+    if (!result.destination) return
+    if (result.source.index === result.destination.index) return
+    const largeCat = result.source.droppableId as LargeCategory
+
+    // 対象の大項目内だけ並び替えて sort_order を振り直す
+    const reordered = categories
+      .filter(c => c.large_category === largeCat)
+      .sort((a, b) => a.sort_order - b.sort_order)
+    const [moved] = reordered.splice(result.source.index, 1)
+    reordered.splice(result.destination.index, 0, moved)
+    const updated = reordered.map((c, i) => ({ ...c, sort_order: i }))
+    setCategories(prev => [...prev.filter(c => c.large_category !== largeCat), ...updated])
+
+    await Promise.all(
+      updated.map(c => supabase.from('categories').update({ sort_order: c.sort_order }).eq('id', c.id))
+    )
   }
 
   async function deleteCategory(catId: string) {
@@ -111,18 +131,43 @@ export function AdminClient({ company, categories: initialCategories, companyUse
         </div>
 
         {/* カテゴリ管理 */}
+        <DragDropContext onDragEnd={handleDragEnd}>
         {LARGE_CATEGORIES.map(largeCat => (
           <div key={largeCat} className="bg-white rounded-xl shadow-sm overflow-hidden">
             <div className="px-4 py-3 bg-gray-50 border-b font-semibold text-gray-700">{largeCat}</div>
             <div className="divide-y">
-              {categories.filter(c => c.large_category === largeCat).map(cat => (
-                <div key={cat.id} className="flex items-center justify-between px-4 py-2">
-                  <span className="text-sm">{cat.name}</span>
-                  <button onClick={() => deleteCategory(cat.id)} className="text-red-400 hover:text-red-600">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
+              <Droppable droppableId={largeCat}>
+                {provided => (
+                  <div className="divide-y" ref={provided.innerRef} {...provided.droppableProps}>
+                    {categories
+                      .filter(c => c.large_category === largeCat)
+                      .sort((a, b) => a.sort_order - b.sort_order)
+                      .map((cat, index) => (
+                        <Draggable key={cat.id} draggableId={cat.id} index={index}>
+                          {(provided, snapshot) => (
+                            <div
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              className={`flex items-center gap-2 px-4 py-2 ${snapshot.isDragging ? 'bg-blue-50 shadow-md rounded' : 'bg-white'}`}
+                            >
+                              <div
+                                {...provided.dragHandleProps}
+                                className="text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing flex-shrink-0"
+                              >
+                                <GripVertical className="w-4 h-4" />
+                              </div>
+                              <span className="text-sm flex-1">{cat.name}</span>
+                              <button onClick={() => deleteCategory(cat.id)} className="text-red-400 hover:text-red-600">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          )}
+                        </Draggable>
+                      ))}
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
               <div className="flex items-center gap-2 px-4 py-2">
                 <Input
                   value={newCatNames[largeCat]}
@@ -139,6 +184,7 @@ export function AdminClient({ company, categories: initialCategories, companyUse
             </div>
           </div>
         ))}
+        </DragDropContext>
 
         {/* ユーザー一覧 */}
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
