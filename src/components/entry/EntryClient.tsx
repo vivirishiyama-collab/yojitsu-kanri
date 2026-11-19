@@ -565,6 +565,7 @@ export function EntryClient({
             {userRole === 'admin' && (
               <Button variant="ghost" size="sm" onClick={() => router.push(`/admin/${company.id}`)}>
                 <Settings className="w-4 h-4" />
+                会社設定
               </Button>
             )}
             <button

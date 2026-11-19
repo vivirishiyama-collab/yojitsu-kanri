@@ -85,7 +85,7 @@ export function AdminClient({ company, categories: initialCategories, companyUse
         <button onClick={() => { router.push(`/?company=${company.id}`); router.refresh() }} className="text-gray-500 hover:text-gray-800">
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <h1 className="text-lg font-bold">管理設定 — {company.name}</h1>
+        <h1 className="text-lg font-bold">会社設定 — {company.name}</h1>
       </div>
 
       <main className="max-w-3xl mx-auto p-6 space-y-6">

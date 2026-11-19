@@ -11,7 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { ChevronDown, LogOut, Building2, Plus } from 'lucide-react'
+import { ChevronDown, LogOut, Building2, Plus, Settings } from 'lucide-react'
 import { createCompany } from '@/app/actions/company'
 
 interface HeaderProps {
@@ -81,6 +81,15 @@ export function Header({ companies, currentCompany, onCompanyChange, userEmail }
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          {currentCompany && (
+            <button
+              onClick={() => router.push(`/admin/${currentCompany.id}`)}
+              className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-sm text-gray-500 hover:bg-gray-50 hover:text-gray-800 transition-colors"
+            >
+              <Settings className="w-4 h-4" />
+              会社設定
+            </button>
+          )}
       </div>
 
       <div className="flex items-center gap-3">
