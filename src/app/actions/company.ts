@@ -18,21 +18,21 @@ export async function createCompany(name: string, fiscalYearStartMonth: number):
     .replace(/[^a-z0-9\-ぁ-んァ-ヶー一-龠]/g, '')
     || `company-${Date.now()}`
 
-  const { data: company, error: companyErr } = await supabase
+  // IDはこちらで採番する。メンバー登録前は会社を読めない(RLS)ため、insert後の select はしない
+  const companyId = crypto.randomUUID()
+  const { error: companyErr } = await supabase
     .from('companies')
-    .insert({ name: trimmed, slug: `${slug}-${Date.now()}`, fiscal_year_start_month: fiscalYearStartMonth })
-    .select()
-    .single()
+    .insert({ id: companyId, name: trimmed, slug: `${slug}-${Date.now()}`, fiscal_year_start_month: fiscalYearStartMonth })
 
-  if (companyErr || !company) return { error: `会社の作成に失敗しました: ${companyErr?.message}` }
+  if (companyErr) return { error: `会社の作成に失敗しました: ${companyErr.message}` }
 
   const { error: memberErr } = await supabase
     .from('company_users')
-    .insert({ company_id: company.id, user_id: user.id, role: 'admin' })
+    .insert({ company_id: companyId, user_id: user.id, role: 'admin' })
 
   if (memberErr) return { error: 'メンバー登録に失敗しました' }
 
-  return { companyId: company.id }
+  return { companyId }
 }
 
 function isValidMonth(m: number): boolean {
