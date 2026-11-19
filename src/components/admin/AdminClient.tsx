@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, Trash2, Plus } from 'lucide-react'
+import { updateFiscalYearStartMonth } from '@/app/actions/company'
 
 const LARGE_CATEGORIES: LargeCategory[] = ['売上内訳', '販売原価', '販管費']
 
@@ -28,6 +29,18 @@ export function AdminClient({ company, categories: initialCategories, companyUse
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviting, setInviting] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
+  const [startMonth, setStartMonth] = useState(company.fiscal_year_start_month ?? 1)
+  const [savingStartMonth, setSavingStartMonth] = useState(false)
+  const [startMonthMessage, setStartMonthMessage] = useState<string | null>(null)
+
+  async function saveStartMonth() {
+    setSavingStartMonth(true)
+    setStartMonthMessage(null)
+    const result = await updateFiscalYearStartMonth(company.id, startMonth)
+    setSavingStartMonth(false)
+    setStartMonthMessage(result.error ?? `保存しました（${startMonth}月〜${startMonth === 1 ? 12 : startMonth - 1}月）`)
+    if (!result.error) router.refresh()
+  }
 
   async function addCategory(largeCat: LargeCategory) {
     const name = newCatNames[largeCat].trim()
@@ -76,6 +89,27 @@ export function AdminClient({ company, categories: initialCategories, companyUse
       </div>
 
       <main className="max-w-3xl mx-auto p-6 space-y-6">
+        {/* 事業年度 */}
+        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+          <div className="px-4 py-3 bg-gray-50 border-b font-semibold text-gray-700">事業年度</div>
+          <div className="px-4 py-3 flex flex-wrap items-center gap-3">
+            <span className="text-sm text-gray-600">期首月</span>
+            <select
+              value={startMonth}
+              onChange={e => setStartMonth(Number(e.target.value))}
+              className="rounded-md border border-gray-300 px-2 py-1 text-sm"
+            >
+              {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                <option key={m} value={m}>{m}月始まり（{m}月〜{m === 1 ? 12 : m - 1}月）</option>
+              ))}
+            </select>
+            <Button size="sm" onClick={saveStartMonth} disabled={savingStartMonth || startMonth === company.fiscal_year_start_month}>
+              {savingStartMonth ? '保存中...' : '保存'}
+            </Button>
+            {startMonthMessage && <span className="text-sm text-blue-600">{startMonthMessage}</span>}
+          </div>
+        </div>
+
         {/* カテゴリ管理 */}
         {LARGE_CATEGORIES.map(largeCat => (
           <div key={largeCat} className="bg-white rounded-xl shadow-sm overflow-hidden">

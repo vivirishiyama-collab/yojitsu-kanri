@@ -26,6 +26,7 @@ export function Header({ companies, currentCompany, onCompanyChange, userEmail }
   const supabase = createClient()
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [newCompanyName, setNewCompanyName] = useState('')
+  const [newStartMonth, setNewStartMonth] = useState(4)
   const [adding, setAdding] = useState(false)
   const [addError, setAddError] = useState('')
 
@@ -38,7 +39,7 @@ export function Header({ companies, currentCompany, onCompanyChange, userEmail }
     if (!newCompanyName.trim()) return
     setAdding(true)
     setAddError('')
-    const result = await createCompany(newCompanyName)
+    const result = await createCompany(newCompanyName, newStartMonth)
     setAdding(false)
     if (result.error) {
       setAddError(result.error)
@@ -106,6 +107,18 @@ export function Header({ companies, currentCompany, onCompanyChange, userEmail }
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 mb-2"
               autoFocus
             />
+            <label className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+              期首月
+              <select
+                value={newStartMonth}
+                onChange={e => setNewStartMonth(Number(e.target.value))}
+                className="rounded-lg border border-gray-300 px-2 py-1 text-sm outline-none focus:border-blue-400"
+              >
+                {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                  <option key={m} value={m}>{m}月始まり</option>
+                ))}
+              </select>
+            </label>
             {addError && <p className="text-xs text-red-500 mb-2">{addError}</p>}
             <div className="flex gap-2 justify-end mt-3">
               <button onClick={() => setShowAddDialog(false)} className="px-4 py-1.5 text-sm rounded-lg border border-gray-200 hover:bg-gray-50">キャンセル</button>
