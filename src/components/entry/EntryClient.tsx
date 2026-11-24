@@ -81,6 +81,16 @@ export function EntryClient({
     return init
   })
 
+  // 税抜・税込を個別に手入力する行（自動計算しない）
+  // 保存値がどちらの方向の自動計算とも一致しない行は手入力とみなす（専用列を持たずに状態を復元）
+  const [manualTax, setManualTax] = useState<Set<string>>(() => new Set(
+    initialEntries
+      .filter(e => e.amount != null && e.amount_including_tax != null
+        && e.amount_including_tax !== calcIncludingTax(e.amount)
+        && e.amount !== calcExcludingTax(e.amount_including_tax))
+      .map(e => e.category_id)
+  ))
+
   // メモ入力欄の表示値（カテゴリID → メモ文字列）
   const [noteInputs, setNoteInputs] = useState<Record<string, string>>(() => {
     const init: Record<string, string> = {}
@@ -169,7 +179,11 @@ export function EntryClient({
     const rawStr = taxExcludedInputs[categoryId] ?? ''
     const numStr = toDigits(rawStr)
     const excludingTax = numStr === '' ? null : parseInt(numStr, 10)
-    const includingTax = excludingTax !== null ? calcIncludingTax(excludingTax) : null
+    // 手入力モードでは税込み欄はそのまま（自動計算しない）
+    const manualInc = toDigits(taxIncludedInputs[categoryId] ?? '')
+    const includingTax = manualTax.has(categoryId)
+      ? (manualInc === '' ? null : parseInt(manualInc, 10))
+      : (excludingTax !== null ? calcIncludingTax(excludingTax) : null)
 
     setTaxExcludedInputs(prev => ({ ...prev, [categoryId]: numStr }))
     setTaxIncludedInputs(prev => ({ ...prev, [categoryId]: includingTax !== null ? String(includingTax) : '' }))
@@ -213,14 +227,18 @@ export function EntryClient({
       setEntries(prev => ({ ...prev, [categoryId]: data }))
     }
     setSaving(null)
-  }, [taxExcludedInputs, entries, company.id, yearMonth, userId, supabase])
+  }, [taxExcludedInputs, taxIncludedInputs, manualTax, entries, company.id, yearMonth, userId, supabase])
 
   // 税込み欄からフォーカスが外れたとき：パースして税抜きを自動計算 → DB保存
   const handleIncludingBlur = useCallback(async (categoryId: string) => {
     const rawStr = taxIncludedInputs[categoryId] ?? ''
     const numStr = toDigits(rawStr)
     const includingTax = numStr === '' ? null : parseInt(numStr, 10)
-    const excludingTax = includingTax !== null ? calcExcludingTax(includingTax) : null
+    // 手入力モードでは税抜き欄はそのまま（自動計算しない）
+    const manualExc = toDigits(taxExcludedInputs[categoryId] ?? '')
+    const excludingTax = manualTax.has(categoryId)
+      ? (manualExc === '' ? null : parseInt(manualExc, 10))
+      : (includingTax !== null ? calcExcludingTax(includingTax) : null)
 
     setTaxIncludedInputs(prev => ({ ...prev, [categoryId]: numStr }))
     setTaxExcludedInputs(prev => ({ ...prev, [categoryId]: excludingTax !== null ? String(excludingTax) : '' }))
@@ -264,7 +282,27 @@ export function EntryClient({
       setEntries(prev => ({ ...prev, [categoryId]: data }))
     }
     setSaving(null)
-  }, [taxIncludedInputs, entries, company.id, yearMonth, userId, supabase])
+  }, [taxIncludedInputs, taxExcludedInputs, manualTax, entries, company.id, yearMonth, userId, supabase])
+
+  // 手入力 ⇔ 自動計算 の切り替え。自動に戻すときは税抜きから税込みを計算し直して保存する
+  const toggleManualTax = useCallback(async (categoryId: string) => {
+    if (!manualTax.has(categoryId)) {
+      setManualTax(prev => new Set(prev).add(categoryId))
+      return
+    }
+    setManualTax(prev => { const next = new Set(prev); next.delete(categoryId); return next })
+    const exc = entries[categoryId]?.amount
+    if (exc == null) return
+    const inc = calcIncludingTax(exc)
+    setTaxIncludedInputs(prev => ({ ...prev, [categoryId]: String(inc) }))
+    setEntries(prev => ({ ...prev, [categoryId]: { ...prev[categoryId], amount_including_tax: inc } }))
+    await supabase
+      .from('monthly_entries')
+      .update({ amount_including_tax: inc, updated_by: userId, updated_at: new Date().toISOString() })
+      .eq('company_id', company.id)
+      .eq('category_id', categoryId)
+      .eq('year_month', yearMonth)
+  }, [manualTax, entries, company.id, yearMonth, userId, supabase])
 
   // 固定メモを「以降の既存月」へ反映（空欄の月だけ埋める）
   const propagateFixedNote = useCallback(async (categoryId: string, note: string | null) => {
@@ -653,6 +691,7 @@ export function EntryClient({
                           const entry = entries[cat.id]
                           const isFixed = entry?.amount_type === 'fixed'
                           const isNoteFixed = entry?.note_type === 'fixed'
+                          const isManualTax = manualTax.has(cat.id)
                           const isSaving = saving === cat.id
                           const excludingTaxValue = taxExcludedInputs[cat.id] ?? ''
                           const includingTaxValue = taxIncludedInputs[cat.id] ?? ''
@@ -757,6 +796,19 @@ export function EntryClient({
                                       disabled={isSaving}
                                     />
                                   </div>
+
+                                  {/* 税の自動計算／手入力 切り替え */}
+                                  <button
+                                    onClick={() => toggleManualTax(cat.id)}
+                                    title={isManualTax ? 'クリックで自動計算に戻す（税抜から税込を再計算）' : 'クリックで税抜・税込を個別に手入力'}
+                                    className={`text-xs px-2 py-1 rounded border transition-colors flex-shrink-0 w-14 ${
+                                      isManualTax
+                                        ? 'border-purple-300 bg-purple-50 text-purple-600'
+                                        : 'border-gray-200 bg-white text-gray-400 hover:border-purple-200 hover:text-purple-500'
+                                    }`}
+                                  >
+                                    {isManualTax ? '手入力' : '自動'}
+                                  </button>
 
                                   {/* メモ固定/変動トグル（固定にすると翌月へメモを引き継ぐ） */}
                                   <button
