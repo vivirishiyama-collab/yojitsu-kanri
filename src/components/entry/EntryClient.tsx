@@ -800,14 +800,14 @@ export function EntryClient({
                                   {/* 税の自動計算／手入力 切り替え */}
                                   <button
                                     onClick={() => toggleManualTax(cat.id)}
-                                    title={isManualTax ? 'クリックで自動計算に戻す（税抜から税込を再計算）' : 'クリックで税抜・税込を個別に手入力'}
-                                    className={`text-xs px-2 py-1 rounded border transition-colors flex-shrink-0 w-14 ${
+                                    title={isManualTax ? '手入力中。クリックで自動計算に戻す（税抜から税込を再計算）' : 'クリックで自動計算を解除し、税抜・税込を個別に手入力'}
+                                    className={`text-xs px-2 py-1 rounded border transition-colors flex-shrink-0 w-16 whitespace-nowrap ${
                                       isManualTax
                                         ? 'border-purple-300 bg-purple-50 text-purple-600'
                                         : 'border-gray-200 bg-white text-gray-400 hover:border-purple-200 hover:text-purple-500'
                                     }`}
                                   >
-                                    {isManualTax ? '手入力' : '自動'}
+                                    {isManualTax ? '手入力中' : '自動解除'}
                                   </button>
 
                                   {/* メモ固定/変動トグル（固定にすると翌月へメモを引き継ぐ） */}
